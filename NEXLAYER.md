@@ -15,26 +15,26 @@
 
 ## Project Summary
 <!-- nexlayer:section agent-managed=project_summary -->
-PollWave is a real-time polling and voting platform featuring JWT authentication, live result updates via Socket.IO, and a comprehensive dashboard for poll analytics.
+PollWave is a real-time polling and voting platform featuring live results via WebSockets, JWT-based authentication, and an analytics dashboard for poll creators.
 <!-- nexlayer:end -->
 
 ## Technology Stack
 <!-- nexlayer:section agent-managed=tech_stack -->
 | Name | Kind | Version | Detected From |
 |------|------|---------|---------------|
-| Next.js | framework | unknown | frontend/Dockerfile |
-| Node.js | language | unknown | backend/Dockerfile |
+| Next.js | framework | latest | frontend/Dockerfile |
+| Node.js | language | latest | backend/Dockerfile |
 | PostgreSQL | database | 16-alpine | docker-compose.yml |
-| Redis | cache | 7-alpine | docker-compose.yml |
-| Socket.IO | tool | unknown | README.md |
+| Redis | database | 7-alpine | docker-compose.yml |
+| Socket.IO | infra | latest | README.md |
 <!-- nexlayer:end -->
 
 ## Repository Structure
 <!-- nexlayer:section agent-managed=structure_map -->
-- backend/ — Node.js server handling API, Socket.IO and database logic
-- frontend/ — Next.js application for the user interface
-- docs/ — Project documentation
-- docker-compose.yml — Local orchestration for PG, Redis, Backend, and Frontend
+- frontend/ — Next.js frontend application
+- backend/ — Express/Node.js API server
+- docker-compose.yml — Local orchestration config
+- nexlayer.yaml — Platform deployment configuration
 <!-- nexlayer:end -->
 
 ## External Services Required
@@ -72,47 +72,43 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 
 ## Nexlayer Setup
 <!-- nexlayer:section agent-managed=nexlayer_setup -->
-### Pod Environment Variables
-
-| Pod | Variable | Value | Kind |
-|-----|----------|-------|------|
-| `frontend` | `API_URL` | `"http://backend.pod:3000"` | plain |
-| `frontend` | `NEXT_PUBLIC_API_URL` | `"http://backend.pod:3000"` | plain |
-| `frontend` | `VITE_API_URL` | `"http://backend.pod:3000"` | plain |
-
 ### nexlayer.yaml
 
 ```yaml
 application:
-  name: soft-jade-poll-wave
+  name: poll-wave
   pods:
-    - name: backend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave-backend:9f22d40-fix4"
-      path: /api
-      servicePorts:
-        - 3000
-      vars: {}
     - name: frontend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave-frontend:9f22d40-fix4"
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:9f22ebb-fix2"
       path: /
       servicePorts:
         - 3000
-      vars:
-        API_URL: "http://backend.pod:3000"
-        NEXT_PUBLIC_API_URL: "http://backend.pod:3000"
-        VITE_API_URL: "http://backend.pod:3000"
+      env:
+        - NEXT_PUBLIC_API_URL: <% URL %>
+        - NEXT_PUBLIC_WS_URL: wss://<% URL %>
+    - name: backend
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:9f22ebb-fix2"
+      path: /backend
+      servicePorts:
+        - 4000
+      env:
+        - DATABASE_URL: postgresql://pollwave:pollwave@postgres.pod:5432/pollwave?schema=public
+        - REDIS_URL: redis://redis.pod:6379
     - name: postgres
       image: mirror.gcr.io/library/postgres:16-alpine
+      path: /postgres
       servicePorts:
         - 5432
-      vars: {}
+      env:
+        - POSTGRES_USER: pollwave
+        - POSTGRES_PASSWORD: pollwave
+        - POSTGRES_DB: pollwave
     - name: redis
       image: mirror.gcr.io/library/redis:7-alpine
+      path: /redis
       servicePorts:
         - 6379
-      vars: {}
 ```
-
 <!-- nexlayer:end -->
 
 ## Nexlayer Deployment Plan
@@ -141,40 +137,45 @@ application:
 
 ## Nexlayer Configuration
 <!-- nexlayer:section agent-managed=nexlayer_config -->
-**Last deployed:** 2026-07-02T12:53:58Z  
-**Live URL:** https://vibrant-wasp-soft-jade-poll-wave.cloud.nexlayer.ai  
-**Runtime:** multi · **Port:** 3000  
-**Deploy branch:** main  
+**Last deployed:** 2026-07-02T13:11:24Z  
+**Live URL:** https://vibrant-wasp-poll-wave.cloud.nexlayer.ai  
+**Runtime:**  · **Port:** auto-detected  
+**Deploy branch:** nexlayer  
 
 ```yaml
 application:
-  name: soft-jade-poll-wave
+  name: poll-wave
   pods:
-    - name: backend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave-backend:9f22d40-fix4"
-      path: /api
-      servicePorts:
-        - 3000
-      vars: {}
     - name: frontend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave-frontend:9f22d40-fix4"
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:9f22ebb-fix2"
       path: /
       servicePorts:
         - 3000
-      vars:
-        API_URL: "http://backend.pod:3000"
-        NEXT_PUBLIC_API_URL: "http://backend.pod:3000"
-        VITE_API_URL: "http://backend.pod:3000"
+      env:
+        - NEXT_PUBLIC_API_URL: <% URL %>
+        - NEXT_PUBLIC_WS_URL: wss://<% URL %>
+    - name: backend
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:9f22ebb-fix2"
+      path: /backend
+      servicePorts:
+        - 4000
+      env:
+        - DATABASE_URL: postgresql://pollwave:pollwave@postgres.pod:5432/pollwave?schema=public
+        - REDIS_URL: redis://redis.pod:6379
     - name: postgres
       image: mirror.gcr.io/library/postgres:16-alpine
+      path: /postgres
       servicePorts:
         - 5432
-      vars: {}
+      env:
+        - POSTGRES_USER: pollwave
+        - POSTGRES_PASSWORD: pollwave
+        - POSTGRES_DB: pollwave
     - name: redis
       image: mirror.gcr.io/library/redis:7-alpine
+      path: /redis
       servicePorts:
         - 6379
-      vars: {}
 ```
 <!-- nexlayer:end -->
 
@@ -182,6 +183,7 @@ application:
 <!-- nexlayer:section agent-managed=build_history -->
 | Date | Status | Notes |
 |------|--------|-------|
-| 2026-07-02T12:36:19Z | analyzed | initial repo analysis |
-| 2026-07-02T12:53:58Z | success | deployed https://vibrant-wasp-soft-jade-poll-wave.cloud.nexlayer.ai |
+| 2026-07-02T13:02:15Z | analyzed | initial repo analysis |
+| 2026-07-02T13:11:24Z | success | deployed https://vibrant-wasp-poll-wave.cloud.nexlayer.ai |
 <!-- nexlayer:end -->
+

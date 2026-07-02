@@ -1,28 +1,33 @@
 application:
-  name: soft-jade-poll-wave
+  name: poll-wave
   pods:
-    - name: backend
-      image: "# filled by pipeline:backend"
-      path: /api
-      servicePorts:
-        - 3000
-      vars: {}
     - name: frontend
-      image: "# filled by pipeline:frontend"
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:9f22ebb-fix2"
       path: /
       servicePorts:
         - 3000
-      vars:
-        API_URL: "http://backend.pod:3000"
-        NEXT_PUBLIC_API_URL: "http://backend.pod:3000"
-        VITE_API_URL: "http://backend.pod:3000"
+      env:
+        - NEXT_PUBLIC_API_URL: <% URL %>
+        - NEXT_PUBLIC_WS_URL: wss://<% URL %>
+    - name: backend
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:9f22ebb-fix2"
+      path: /backend
+      servicePorts:
+        - 4000
+      env:
+        - DATABASE_URL: postgresql://pollwave:pollwave@postgres.pod:5432/pollwave?schema=public
+        - REDIS_URL: redis://redis.pod:6379
     - name: postgres
       image: mirror.gcr.io/library/postgres:16-alpine
+      path: /postgres
       servicePorts:
         - 5432
-      vars: {}
+      env:
+        - POSTGRES_USER: pollwave
+        - POSTGRES_PASSWORD: pollwave
+        - POSTGRES_DB: pollwave
     - name: redis
       image: mirror.gcr.io/library/redis:7-alpine
+      path: /redis
       servicePorts:
         - 6379
-      vars: {}
