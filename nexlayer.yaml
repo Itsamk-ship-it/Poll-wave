@@ -1,49 +1,38 @@
 application:
   name: poll-wave
   pods:
-    # Next.js frontend — owns "/" and serves the SPA/SSR. The browser talks to
-    # the API/WebSocket same-origin under "/api", so no NEXT_PUBLIC_* URL is
-    # baked in (they are set empty at build time — see Dockerfile).
-    - name: frontend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:9f22ebb-fix2"
+    # Pod names are unique per namespace (they become internal DNS hosts), and
+    # this account shares one namespace across apps. Generic names like
+    # frontend/backend/postgres collide with other apps' pods and stall the
+    # deploy, so every pod is prefixed with the app name.
+    - name: pollwave-frontend
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f23581e58"
       path: /
       servicePorts:
         - 3000
-      env:
-        - POD_ROLE: frontend
-
-    # Express API — owns "/api". Same image as frontend; POD_ROLE makes the
-    # entrypoint run the backend and push the Prisma schema on boot.
-    # Express mounts its routes at /api and Socket.IO at /api/socket.io, so the
-    # forwarded "/api/..." path lines up with no rewrite needed.
-    - name: backend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:9f22ebb-fix2"
+      vars:
+        POD_ROLE: frontend
+    - name: pollwave-backend
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f23581e58"
       path: /api
       servicePorts:
         - 4000
-      env:
-        - POD_ROLE: backend
-        - NODE_ENV: production
-        - PORT: "4000"
-        - DATABASE_URL: postgresql://pollwave:pollwave@postgres.pod:5432/pollwave?schema=public
-        - REDIS_URL: redis://redis.pod:6379
-        - CORS_ORIGIN: https://vibrant-wasp-poll-wave.cloud.nexlayer.ai
-        # JWT_ACCESS_SECRET / JWT_REFRESH_SECRET: set these as encrypted vars in
-        # the Nexlayer dashboard for production. The app falls back to insecure
-        # dev defaults if unset, so auth still works for a first live test.
-
-    - name: postgres
+      vars:
+        POD_ROLE: backend
+        NODE_ENV: production
+        PORT: "4000"
+        DATABASE_URL: postgresql://pollwave:${POSTGRES_PASSWORD}@pollwave-postgres.pod:5432/pollwave?schema=public
+        REDIS_URL: redis://pollwave-redis.pod:6379
+        CORS_ORIGIN: https://vibrant-wasp-poll-wave.cloud.nexlayer.ai
+    - name: pollwave-postgres
       image: mirror.gcr.io/library/postgres:16-alpine
-      path: /postgres
       servicePorts:
         - 5432
-      env:
-        - POSTGRES_USER: pollwave
-        - POSTGRES_PASSWORD: pollwave
-        - POSTGRES_DB: pollwave
-
-    - name: redis
+      vars:
+        POSTGRES_USER: pollwave
+        POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+        POSTGRES_DB: pollwave
+    - name: pollwave-redis
       image: mirror.gcr.io/library/redis:7-alpine
-      path: /redis
       servicePorts:
         - 6379
