@@ -15,26 +15,26 @@
 
 ## Project Summary
 <!-- nexlayer:section agent-managed=project_summary -->
-PollWave is a real-time polling and voting platform featuring live results via WebSockets, JWT-based authentication, and an analytics dashboard for poll creators.
+PollWave is a real-time poll and voting platform featuring live results via WebSockets, diverse poll types, and a comprehensive user dashboard for analytics.
 <!-- nexlayer:end -->
 
 ## Technology Stack
 <!-- nexlayer:section agent-managed=tech_stack -->
 | Name | Kind | Version | Detected From |
 |------|------|---------|---------------|
-| Next.js | framework | latest | frontend/Dockerfile |
-| Node.js | language | latest | backend/Dockerfile |
-| PostgreSQL | database | 16-alpine | docker-compose.yml |
-| Redis | database | 7-alpine | docker-compose.yml |
-| Socket.IO | infra | latest | README.md |
+| Next.js | framework | Latest | Dockerfile, README.md |
+| Node.js | language | 20 | Dockerfile |
+| PostgreSQL | database | 16 | docker-compose.yml |
+| Redis | database | 7 | docker-compose.yml |
+| Prisma | tool | Latest | Dockerfile |
+| Socket.IO | framework | Latest | README.md |
 <!-- nexlayer:end -->
 
 ## Repository Structure
 <!-- nexlayer:section agent-managed=structure_map -->
-- frontend/ — Next.js frontend application
-- backend/ — Express/Node.js API server
-- docker-compose.yml — Local orchestration config
-- nexlayer.yaml — Platform deployment configuration
+- frontend/ — Next.js application source and build config
+- backend/ — Express/Node.js API, Prisma schema, and business logic
+- docs/ — API documentation
 <!-- nexlayer:end -->
 
 ## External Services Required
@@ -72,40 +72,60 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 
 ## Nexlayer Setup
 <!-- nexlayer:section agent-managed=nexlayer_setup -->
+### Pod Environment Variables
+
+| Pod | Variable | Value | Kind |
+|-----|----------|-------|------|
+| `pollwave-frontend` | `POD_ROLE` | `frontend` | plain |
+| `pollwave-backend` | `POD_ROLE` | `backend` | plain |
+| `pollwave-backend` | `NODE_ENV` | `production` | plain |
+| `pollwave-backend` | `PORT` | `"4000"` | plain |
+| `pollwave-backend` | `DATABASE_URL` | `postgresql://pollwave:${POSTGRES_PASSWORD}@pollwave-postgres.pod:5432/pollwave?schema=public` | inter-pod |
+| `pollwave-backend` | `REDIS_URL` | `redis://pollwave-redis.pod:6379` | plain |
+| `pollwave-backend` | `CORS_ORIGIN` | `https://vibrant-wasp-poll-wave.cloud.nexlayer.ai` | plain |
+| `pollwave-postgres` | `POSTGRES_USER` | `pollwave` | plain |
+| `pollwave-postgres` | `POSTGRES_PASSWORD` | `"${POSTGRES_PASSWORD}"` | inter-pod |
+| `pollwave-postgres` | `POSTGRES_DB` | `pollwave` | plain |
+
 ### nexlayer.yaml
 
 ```yaml
 application:
   name: poll-wave
   pods:
-    - name: frontend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:9f22ebb-fix2"
+    # Pod names are unique per namespace (they become internal DNS hosts), and
+    # this account shares one namespace across apps. Generic names like
+    # frontend/backend/postgres collide with other apps' pods and stall the
+    # deploy, so every pod is prefixed with the app name.
+    - name: pollwave-frontend
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f236eecc4"
       path: /
       servicePorts:
         - 3000
-      env:
-        - NEXT_PUBLIC_API_URL: <% URL %>
-        - NEXT_PUBLIC_WS_URL: wss://<% URL %>
-    - name: backend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:9f22ebb-fix2"
-      path: /backend
+      vars:
+        POD_ROLE: frontend
+    - name: pollwave-backend
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f236eecc4"
+      path: /api
       servicePorts:
         - 4000
-      env:
-        - DATABASE_URL: postgresql://pollwave:pollwave@postgres.pod:5432/pollwave?schema=public
-        - REDIS_URL: redis://redis.pod:6379
-    - name: postgres
+      vars:
+        POD_ROLE: backend
+        NODE_ENV: production
+        PORT: "4000"
+        DATABASE_URL: postgresql://pollwave:${POSTGRES_PASSWORD}@pollwave-postgres.pod:5432/pollwave?schema=public
+        REDIS_URL: redis://pollwave-redis.pod:6379
+        CORS_ORIGIN: https://vibrant-wasp-poll-wave.cloud.nexlayer.ai
+    - name: pollwave-postgres
       image: mirror.gcr.io/library/postgres:16-alpine
-      path: /postgres
       servicePorts:
         - 5432
-      env:
-        - POSTGRES_USER: pollwave
-        - POSTGRES_PASSWORD: pollwave
-        - POSTGRES_DB: pollwave
-    - name: redis
+      vars:
+        POSTGRES_USER: pollwave
+        POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+        POSTGRES_DB: pollwave
+    - name: pollwave-redis
       image: mirror.gcr.io/library/redis:7-alpine
-      path: /redis
       servicePorts:
         - 6379
 ```
@@ -137,7 +157,7 @@ application:
 
 ## Nexlayer Configuration
 <!-- nexlayer:section agent-managed=nexlayer_config -->
-**Last deployed:** 2026-07-02T13:11:24Z  
+**Last deployed:** 2026-07-02T15:27:02Z  
 **Live URL:** https://vibrant-wasp-poll-wave.cloud.nexlayer.ai  
 **Runtime:**  · **Port:** auto-detected  
 **Deploy branch:** nexlayer  
@@ -146,34 +166,39 @@ application:
 application:
   name: poll-wave
   pods:
-    - name: frontend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:9f22ebb-fix2"
+    # Pod names are unique per namespace (they become internal DNS hosts), and
+    # this account shares one namespace across apps. Generic names like
+    # frontend/backend/postgres collide with other apps' pods and stall the
+    # deploy, so every pod is prefixed with the app name.
+    - name: pollwave-frontend
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f236eecc4"
       path: /
       servicePorts:
         - 3000
-      env:
-        - NEXT_PUBLIC_API_URL: <% URL %>
-        - NEXT_PUBLIC_WS_URL: wss://<% URL %>
-    - name: backend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:9f22ebb-fix2"
-      path: /backend
+      vars:
+        POD_ROLE: frontend
+    - name: pollwave-backend
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f236eecc4"
+      path: /api
       servicePorts:
         - 4000
-      env:
-        - DATABASE_URL: postgresql://pollwave:pollwave@postgres.pod:5432/pollwave?schema=public
-        - REDIS_URL: redis://redis.pod:6379
-    - name: postgres
+      vars:
+        POD_ROLE: backend
+        NODE_ENV: production
+        PORT: "4000"
+        DATABASE_URL: postgresql://pollwave:${POSTGRES_PASSWORD}@pollwave-postgres.pod:5432/pollwave?schema=public
+        REDIS_URL: redis://pollwave-redis.pod:6379
+        CORS_ORIGIN: https://vibrant-wasp-poll-wave.cloud.nexlayer.ai
+    - name: pollwave-postgres
       image: mirror.gcr.io/library/postgres:16-alpine
-      path: /postgres
       servicePorts:
         - 5432
-      env:
-        - POSTGRES_USER: pollwave
-        - POSTGRES_PASSWORD: pollwave
-        - POSTGRES_DB: pollwave
-    - name: redis
+      vars:
+        POSTGRES_USER: pollwave
+        POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+        POSTGRES_DB: pollwave
+    - name: pollwave-redis
       image: mirror.gcr.io/library/redis:7-alpine
-      path: /redis
       servicePorts:
         - 6379
 ```
@@ -183,7 +208,9 @@ application:
 <!-- nexlayer:section agent-managed=build_history -->
 | Date | Status | Notes |
 |------|--------|-------|
-| 2026-07-02T13:02:15Z | analyzed | initial repo analysis |
-| 2026-07-02T13:11:24Z | success | deployed https://vibrant-wasp-poll-wave.cloud.nexlayer.ai |
+| 2026-07-02T15:25:32Z | analyzed | initial repo analysis |
+| 2026-07-02T15:27:02Z | success | deployed https://vibrant-wasp-poll-wave.cloud.nexlayer.ai |
 <!-- nexlayer:end -->
+
+
 

@@ -6,25 +6,27 @@
 # ─────────────────────────────────────────────────────────────────────────────
 FROM mirror.gcr.io/library/node:20-alpine AS builder
 
-# Native module + Prisma engine prerequisites.
+# Build dependencies for native modules / Prisma engines.
 RUN apk add --no-cache libc6-compat openssl
 
 WORKDIR /app
 
-# ── Backend: install deps, generate Prisma client, compile TS → dist/ ────────
+# Backend: install deps, generate the Prisma client, compile TS -> dist/src.
 COPY backend/package*.json ./backend/
 RUN cd backend && npm install
 COPY backend/ ./backend/
-RUN cd backend && npm run build   # prisma generate && tsc  → dist/src/index.js
+RUN cd backend && npm run build
 
-# ── Frontend: install deps, then build ───────────────────────────────────────
+# Frontend: install deps, then build.
 COPY frontend/package*.json ./frontend/
 RUN cd frontend && npm install
 COPY frontend/ ./frontend/
 
-# Empty NEXT_PUBLIC_* → the client uses same-origin relative URLs (`/api`,
-# `/api/socket.io`). NEXT_PUBLIC_* are inlined at build time, so they MUST be
-# correct here — setting them in nexlayer.yaml at runtime has no effect.
+# NEXT_PUBLIC_* are inlined into the bundle at BUILD time (runtime env is
+# ignored by the client), so they must be correct here. Empty => the client
+# uses same-origin relative URLs (/api and /api/socket.io). At runtime those
+# resolve to the real deployment URL the browser is already on — no
+# placeholder host, and nothing to change if the deployment URL changes.
 ENV NEXT_PUBLIC_API_URL=""
 ENV NEXT_PUBLIC_WS_URL=""
 RUN cd frontend && NODE_OPTIONS="--max-old-space-size=8192" npm run build
@@ -37,9 +39,8 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 ENV NODE_ENV=production
-# Next.js standalone binds to HOSTNAME; default to all interfaces so the
-# platform can reach it. PORT defaults to 3000 (frontend); the backend pod
-# overrides PORT=4000 via nexlayer.yaml.
+# Next.js standalone binds to HOSTNAME; bind all interfaces. PORT defaults to
+# 3000 (frontend); the backend pod overrides PORT=4000 via nexlayer.yaml.
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
@@ -49,12 +50,14 @@ COPY --from=builder /app/frontend/.next/static ./frontend/.next/static
 COPY --from=builder /app/frontend/public ./frontend/public
 
 # Backend: bring the built app WITH its node_modules (includes the generated
-# Prisma client and the Prisma CLI used by the entrypoint to push the schema).
+# Prisma client and the Prisma CLI used below to push the schema on boot).
 COPY --from=builder /app/backend ./backend
-
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
 
 EXPOSE 3000 4000
 
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+# One image, two roles. Nexlayer runs the container CMD as-is (no per-pod
+# command override), so the pod's POD_ROLE env selects the process:
+#  - backend: push the Prisma schema (no migration files exist), retrying
+#    until Postgres accepts connections, then start the API.
+#  - default: run the Next.js standalone frontend server.
+CMD ["sh","-c","if [ \"$POD_ROLE\" = \"backend\" ]; then cd /app/backend; i=0; until ./node_modules/.bin/prisma db push --skip-generate --accept-data-loss; do i=$((i+1)); [ $i -ge 20 ] && exit 1; echo \"db not ready, retry $i/20\"; sleep 3; done; exec node dist/src/index.js; else cd /app; exec node frontend/server.js; fi"]

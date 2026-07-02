@@ -7,56 +7,60 @@ This file is the authoritative, pinned build solution for this repo. Nexlayer us
 ```dockerfile
 FROM mirror.gcr.io/library/node:20-alpine AS builder
 
-# Install build dependencies for native modules (needed for Prisma/bcrypt etc)
+# Build dependencies for native modules / Prisma engines.
 RUN apk add --no-cache libc6-compat openssl
 
 WORKDIR /app
 
-# Build Backend
+# Backend: install deps, generate the Prisma client, compile TS -> dist/src.
 COPY backend/package*.json ./backend/
 RUN cd backend && npm install
 COPY backend/ ./backend/
-RUN cd backend && npx prisma generate
+RUN cd backend && npm run build
 
-# Build Frontend
+# Frontend: install deps, then build.
 COPY frontend/package*.json ./frontend/
 RUN cd frontend && npm install
 COPY frontend/ ./frontend/
 
-# Fix for Next.js standalone output
-RUN sed -i 's/output.*export/output: "standalone"/' frontend/next.config.* 2>/dev/null || true
-
-# Inject build-time env vars to satisfy validation during build/SSG
-ENV NEXT_PUBLIC_API_URL=https://api.placeholder.nexlayer.ai
-ENV NEXT_PUBLIC_WS_URL=wss://api.placeholder.nexlayer.ai
-
+# NEXT_PUBLIC_* are inlined into the bundle at BUILD time (runtime env is
+# ignored by the client), so they must be correct here. Empty => the client
+# uses same-origin relative URLs (/api and /api/socket.io). At runtime those
+# resolve to the real deployment URL the browser is already on — no
+# placeholder host, and nothing to change if the deployment URL changes.
+ENV NEXT_PUBLIC_API_URL=""
+ENV NEXT_PUBLIC_WS_URL=""
 RUN cd frontend && NODE_OPTIONS="--max-old-space-size=8192" npm run build
 
 FROM mirror.gcr.io/library/node:20-alpine AS runner
 
-# Install openssl for Prisma runtime
+# openssl is required by the Prisma query engine at runtime.
 RUN apk add --no-cache openssl
 
 WORKDIR /app
+ENV NODE_ENV=production
+# Next.js standalone binds to HOSTNAME; bind all interfaces. PORT defaults to
+# 3000 (frontend); the backend pod overrides PORT=4000 via nexlayer.yaml.
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
 
-# Copy built frontend standalone
+# Frontend: Next.js standalone output.
 COPY --from=builder /app/frontend/.next/standalone ./frontend
 COPY --from=builder /app/frontend/.next/static ./frontend/.next/static
 COPY --from=builder /app/frontend/public ./frontend/public
 
-# Copy backend source and prisma client
+# Backend: bring the built app WITH its node_modules (includes the generated
+# Prisma client and the Prisma CLI used below to push the schema on boot).
 COPY --from=builder /app/backend ./backend
-
-# Install production dependencies for backend
-RUN cd backend && npm install --omit=dev
 
 EXPOSE 3000 4000
 
-# The app consists of two parts. Since Nexlayer typically expects one entrypoint per pod,
-# and the provided Dockerfile was attempting to run the frontend server.js,
-# we stick to that but ensure we have the backend files available.
-# Note: In a real multi-pod setup, these would be separate images/pods.
-CMD ["node", "frontend/server.js"]
+# One image, two roles. Nexlayer runs the container CMD as-is (no per-pod
+# command override), so the pod's POD_ROLE env selects the process:
+#  - backend: push the Prisma schema (no migration files exist), retrying
+#    until Postgres accepts connections, then start the API.
+#  - default: run the Next.js standalone frontend server.
+CMD ["sh","-c","if [ \"$POD_ROLE\" = \"backend\" ]; then cd /app/backend; i=0; until ./node_modules/.bin/prisma db push --skip-generate --accept-data-loss; do i=$((i+1)); [ $i -ge 20 ] && exit 1; echo \"db not ready, retry $i/20\"; sleep 3; done; exec node dist/src/index.js; else cd /app; exec node frontend/server.js; fi"]
 
 ```
 
@@ -66,27 +70,47 @@ CMD ["node", "frontend/server.js"]
 application:
   name: poll-wave
   pods:
+    # Nexlayer prefixes each pod's resources with the app name (e.g. the
+    # 'backend' pod becomes deployment 'poll-wave-backend'), so these generic
+    # names do NOT collide with other apps. Keeping them lets a redeploy update
+    # the existing poll-wave-* pods in place instead of scheduling a new set.
     - name: frontend
       image: "# filled by pipeline"
-      port: 3000
-      env:
-        - NEXT_PUBLIC_API_URL: <% URL %>
-        - NEXT_PUBLIC_WS_URL: wss://<% URL %>
+      path: /
+      servicePorts:
+        - 3000
+      vars:
+        POD_ROLE: frontend
     - name: backend
       image: "# filled by pipeline"
-      port: 4000
-      env:
-        - DATABASE_URL: postgresql://pollwave:pollwave@postgres:5432/pollwave?schema=public
-        - REDIS_URL: redis://redis:6379
+      path: /api
+      servicePorts:
+        - 4000
+      vars:
+        POD_ROLE: backend
+        NODE_ENV: production
+        PORT: "4000"
+        DATABASE_URL: postgresql://pollwave:pollwave@postgres.pod:5432/pollwave?schema=public
+        REDIS_URL: redis://redis.pod:6379
+        CORS_ORIGIN: https://vibrant-wasp-poll-wave.cloud.nexlayer.ai
+        # Injected from the dashboard-stored secrets (same ${...} mechanism the
+        # pipeline uses for the DB password). Without these the app falls back
+        # to insecure hardcoded dev signing keys.
+        JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
+        JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
+        JWT_ACCESS_EXPIRES: "${JWT_ACCESS_EXPIRES}"
+        JWT_REFRESH_EXPIRES: "${JWT_REFRESH_EXPIRES}"
     - name: postgres
       image: mirror.gcr.io/library/postgres:16-alpine
-      port: 5432
-      env:
-        - POSTGRES_USER: pollwave
-        - POSTGRES_PASSWORD: pollwave
-        - POSTGRES_DB: pollwave
+      servicePorts:
+        - 5432
+      vars:
+        POSTGRES_USER: pollwave
+        POSTGRES_PASSWORD: pollwave
+        POSTGRES_DB: pollwave
     - name: redis
       image: mirror.gcr.io/library/redis:7-alpine
-      port: 6379
+      servicePorts:
+        - 6379
 
 ```
