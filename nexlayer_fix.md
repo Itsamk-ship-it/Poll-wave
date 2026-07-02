@@ -108,6 +108,11 @@ application:
         POSTGRES_USER: pollwave
         POSTGRES_PASSWORD: pollwave
         POSTGRES_DB: pollwave
+        # Nexlayer's managed-credential substitution was leaving POSTGRES_PASSWORD
+        # empty in this pod, so Postgres refused to initialize. `trust` lets it
+        # init and accept in-cluster connections regardless of the resolved
+        # password (Postgres has no public path, so this is internal-only).
+        POSTGRES_HOST_AUTH_METHOD: trust
     - name: redis
       image: mirror.gcr.io/library/redis:7-alpine
       servicePorts:

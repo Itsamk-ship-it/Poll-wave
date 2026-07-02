@@ -39,6 +39,9 @@ application:
         POSTGRES_USER: pollwave
         POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
         POSTGRES_DB: pollwave
+        # Lets Postgres initialize and accept in-cluster connections even when
+        # the managed POSTGRES_PASSWORD resolves empty (internal-only pod).
+        POSTGRES_HOST_AUTH_METHOD: trust
     - name: redis
       image: mirror.gcr.io/library/redis:7-alpine
       servicePorts:
