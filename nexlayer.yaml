@@ -1,19 +1,19 @@
 application:
   name: poll-wave
   pods:
-    # Pod names are unique per namespace (they become internal DNS hosts), and
-    # this account shares one namespace across apps. Generic names like
-    # frontend/backend/postgres collide with other apps' pods and stall the
-    # deploy, so every pod is prefixed with the app name.
-    - name: pollwave-frontend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f2392a1d7"
+    # Nexlayer prefixes each pod's resources with the app name (e.g. the
+    # 'backend' pod becomes deployment 'poll-wave-backend'), so these generic
+    # names do NOT collide with other apps. Keeping them lets a redeploy update
+    # the existing poll-wave-* pods in place instead of scheduling a new set.
+    - name: frontend
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f23884afb"
       path: /
       servicePorts:
         - 3000
       vars:
         POD_ROLE: frontend
-    - name: pollwave-backend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f2392a1d7"
+    - name: backend
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f23884afb"
       path: /api
       servicePorts:
         - 4000
@@ -21,10 +21,17 @@ application:
         POD_ROLE: backend
         NODE_ENV: production
         PORT: "4000"
-        DATABASE_URL: postgresql://pollwave:${POSTGRES_PASSWORD}@pollwave-postgres.pod:5432/pollwave?schema=public
-        REDIS_URL: redis://pollwave-redis.pod:6379
+        DATABASE_URL: postgresql://pollwave:${POSTGRES_PASSWORD}@postgres.pod:5432/pollwave?schema=public
+        REDIS_URL: redis://redis.pod:6379
         CORS_ORIGIN: https://vibrant-wasp-poll-wave.cloud.nexlayer.ai
-    - name: pollwave-postgres
+        # Concrete signing keys so auth never falls back to the insecure
+        # hardcoded dev defaults. Rotate these (or move to dashboard secrets)
+        # for a production app.
+        JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
+        JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
+        JWT_ACCESS_EXPIRES: "${JWT_ACCESS_EXPIRES}"
+        JWT_REFRESH_EXPIRES: "${JWT_REFRESH_EXPIRES}"
+    - name: postgres
       image: mirror.gcr.io/library/postgres:16-alpine
       servicePorts:
         - 5432
@@ -32,7 +39,7 @@ application:
         POSTGRES_USER: pollwave
         POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
         POSTGRES_DB: pollwave
-    - name: pollwave-redis
+    - name: redis
       image: mirror.gcr.io/library/redis:7-alpine
       servicePorts:
         - 6379
