@@ -1,0 +1,28 @@
+application:
+  name: soft-jade-poll-wave
+  pods:
+    - name: backend
+      image: "# filled by pipeline:backend"
+      path: /api
+      servicePorts:
+        - 3000
+      vars: {}
+    - name: frontend
+      image: "# filled by pipeline:frontend"
+      path: /
+      servicePorts:
+        - 3000
+      vars:
+        API_URL: "http://backend.pod:3000"
+        NEXT_PUBLIC_API_URL: "http://backend.pod:3000"
+        VITE_API_URL: "http://backend.pod:3000"
+    - name: postgres
+      image: mirror.gcr.io/library/postgres:16-alpine
+      servicePorts:
+        - 5432
+      vars: {}
+    - name: redis
+      image: mirror.gcr.io/library/redis:7-alpine
+      servicePorts:
+        - 6379
+      vars: {}
