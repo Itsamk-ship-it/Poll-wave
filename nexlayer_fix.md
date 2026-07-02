@@ -70,18 +70,18 @@ CMD ["sh","-c","if [ \"$POD_ROLE\" = \"backend\" ]; then cd /app/backend; i=0; u
 application:
   name: poll-wave
   pods:
-    # Pod names are unique per namespace (they become internal DNS hosts), and
-    # this account shares one namespace across apps. Generic names like
-    # frontend/backend/postgres collide with other apps' pods and stall the
-    # deploy, so every pod is prefixed with the app name.
-    - name: pollwave-frontend
+    # Nexlayer prefixes each pod's resources with the app name (e.g. the
+    # 'backend' pod becomes deployment 'poll-wave-backend'), so these generic
+    # names do NOT collide with other apps. Keeping them lets a redeploy update
+    # the existing poll-wave-* pods in place instead of scheduling a new set.
+    - name: frontend
       image: "# filled by pipeline"
       path: /
       servicePorts:
         - 3000
       vars:
         POD_ROLE: frontend
-    - name: pollwave-backend
+    - name: backend
       image: "# filled by pipeline"
       path: /api
       servicePorts:
@@ -90,10 +90,10 @@ application:
         POD_ROLE: backend
         NODE_ENV: production
         PORT: "4000"
-        DATABASE_URL: postgresql://pollwave:pollwave@pollwave-postgres.pod:5432/pollwave?schema=public
-        REDIS_URL: redis://pollwave-redis.pod:6379
+        DATABASE_URL: postgresql://pollwave:pollwave@postgres.pod:5432/pollwave?schema=public
+        REDIS_URL: redis://redis.pod:6379
         CORS_ORIGIN: https://vibrant-wasp-poll-wave.cloud.nexlayer.ai
-    - name: pollwave-postgres
+    - name: postgres
       image: mirror.gcr.io/library/postgres:16-alpine
       servicePorts:
         - 5432
@@ -101,7 +101,7 @@ application:
         POSTGRES_USER: pollwave
         POSTGRES_PASSWORD: pollwave
         POSTGRES_DB: pollwave
-    - name: pollwave-redis
+    - name: redis
       image: mirror.gcr.io/library/redis:7-alpine
       servicePorts:
         - 6379
