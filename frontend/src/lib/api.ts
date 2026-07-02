@@ -1,6 +1,10 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+// `??` (not `||`) so an intentionally-empty NEXT_PUBLIC_API_URL means
+// "call the API same-origin" (baseURL becomes a relative `/api`). In the
+// Nexlayer deployment the backend is routed under `/api` on the same host,
+// so the browser needs no absolute URL. Local dev falls back to :4000.
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 export const api = axios.create({
   baseURL: `${API_URL}/api`,
