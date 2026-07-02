@@ -70,14 +70,18 @@ CMD ["sh","-c","if [ \"$POD_ROLE\" = \"backend\" ]; then cd /app/backend; i=0; u
 application:
   name: poll-wave
   pods:
-    - name: frontend
+    # Pod names are unique per namespace (they become internal DNS hosts), and
+    # this account shares one namespace across apps. Generic names like
+    # frontend/backend/postgres collide with other apps' pods and stall the
+    # deploy, so every pod is prefixed with the app name.
+    - name: pollwave-frontend
       image: "# filled by pipeline"
       path: /
       servicePorts:
         - 3000
       vars:
         POD_ROLE: frontend
-    - name: backend
+    - name: pollwave-backend
       image: "# filled by pipeline"
       path: /api
       servicePorts:
@@ -86,10 +90,10 @@ application:
         POD_ROLE: backend
         NODE_ENV: production
         PORT: "4000"
-        DATABASE_URL: postgresql://pollwave:pollwave@postgres.pod:5432/pollwave?schema=public
-        REDIS_URL: redis://redis.pod:6379
+        DATABASE_URL: postgresql://pollwave:pollwave@pollwave-postgres.pod:5432/pollwave?schema=public
+        REDIS_URL: redis://pollwave-redis.pod:6379
         CORS_ORIGIN: https://vibrant-wasp-poll-wave.cloud.nexlayer.ai
-    - name: postgres
+    - name: pollwave-postgres
       image: mirror.gcr.io/library/postgres:16-alpine
       servicePorts:
         - 5432
@@ -97,7 +101,7 @@ application:
         POSTGRES_USER: pollwave
         POSTGRES_PASSWORD: pollwave
         POSTGRES_DB: pollwave
-    - name: redis
+    - name: pollwave-redis
       image: mirror.gcr.io/library/redis:7-alpine
       servicePorts:
         - 6379
