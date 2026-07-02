@@ -75,14 +75,14 @@ application:
     # names do NOT collide with other apps. Keeping them lets a redeploy update
     # the existing poll-wave-* pods in place instead of scheduling a new set.
     - name: frontend
-      image: "# filled by pipeline"
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f23884afb"
       path: /
       servicePorts:
         - 3000
       vars:
         POD_ROLE: frontend
     - name: backend
-      image: "# filled by pipeline"
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f23884afb"
       path: /api
       servicePorts:
         - 4000
