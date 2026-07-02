@@ -93,6 +93,13 @@ application:
         DATABASE_URL: postgresql://pollwave:pollwave@postgres.pod:5432/pollwave?schema=public
         REDIS_URL: redis://redis.pod:6379
         CORS_ORIGIN: https://vibrant-wasp-poll-wave.cloud.nexlayer.ai
+        # Injected from the dashboard-stored secrets (same ${...} mechanism the
+        # pipeline uses for the DB password). Without these the app falls back
+        # to insecure hardcoded dev signing keys.
+        JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
+        JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
+        JWT_ACCESS_EXPIRES: "${JWT_ACCESS_EXPIRES}"
+        JWT_REFRESH_EXPIRES: "${JWT_REFRESH_EXPIRES}"
     - name: postgres
       image: mirror.gcr.io/library/postgres:16-alpine
       servicePorts:
