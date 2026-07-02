@@ -1,10 +1,6 @@
-# syntax=docker/dockerfile:1
-# ─────────────────────────────────────────────────────────────────────────────
-# PollWave — single image, two runtime roles (frontend + backend).
-# Nexlayer builds one image and forbids per-pod `command:`, so the entrypoint
-# branches on POD_ROLE. See docker-entrypoint.sh and nexlayer.yaml.
-# ─────────────────────────────────────────────────────────────────────────────
 FROM mirror.gcr.io/library/node:20-alpine AS builder
+# build-time env seeded from user-provided build-time secrets
+ENV NEXT_PUBLIC_API_URL=http://localhost:4000
 
 # Build dependencies for native modules / Prisma engines.
 RUN apk add --no-cache libc6-compat openssl
@@ -31,7 +27,6 @@ ENV NEXT_PUBLIC_API_URL=""
 ENV NEXT_PUBLIC_WS_URL=""
 RUN cd frontend && NODE_OPTIONS="--max-old-space-size=8192" npm run build
 
-# ─────────────────────────────────────────────────────────────────────────────
 FROM mirror.gcr.io/library/node:20-alpine AS runner
 
 # openssl is required by the Prisma query engine at runtime.
