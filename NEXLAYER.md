@@ -15,25 +15,25 @@
 
 ## Project Summary
 <!-- nexlayer:section agent-managed=project_summary -->
-PollWave is a real-time poll and voting platform featuring live results via WebSockets, multiple poll types, and a full authentication system for users and anonymous voters.
+PollWave is a real-time poll and voting platform featuring JWT authentication, live result updates via Socket.IO, and a comprehensive dashboard for analytics and poll management.
 <!-- nexlayer:end -->
 
 ## Technology Stack
 <!-- nexlayer:section agent-managed=tech_stack -->
 | Name | Kind | Version | Detected From |
 |------|------|---------|---------------|
-| Next.js | framework | 15.1 | Dockerfile |
+| Next.js | framework | latest | frontend/package.json |
 | Node.js | language | 20 | Dockerfile |
 | PostgreSQL | database | 16 | docker-compose.yml |
 | Redis | database | 7 | docker-compose.yml |
 | Prisma | tool | latest | Dockerfile |
-| Socket.IO | framework | latest | README.md |
+| Socket.IO | infra | latest | README.md |
 <!-- nexlayer:end -->
 
 ## Repository Structure
 <!-- nexlayer:section agent-managed=structure_map -->
-- frontend/ — Next.js application for the user interface
-- backend/ — Node.js API server with Express and Prisma
+- backend/ — Node.js API with Prisma ORM and Socket.IO
+- frontend/ — Next.js application for user interface
 - Dockerfile — Multi-stage build for both frontend and backend
 <!-- nexlayer:end -->
 
@@ -168,7 +168,7 @@ application:
 
 ## Nexlayer Configuration
 <!-- nexlayer:section agent-managed=nexlayer_config -->
-**Last deployed:** 2026-07-02T16:09:29Z  
+**Last deployed:** 2026-07-02T16:22:50Z  
 **Live URL:** https://vibrant-wasp-poll-wave.cloud.nexlayer.ai  
 **Runtime:**  · **Port:** auto-detected  
 **Deploy branch:** nexlayer  
@@ -226,9 +226,10 @@ application:
 <!-- nexlayer:section agent-managed=build_history -->
 | Date | Status | Notes |
 |------|--------|-------|
-| 2026-07-02T16:08:16Z | analyzed | initial repo analysis |
-| 2026-07-02T16:09:29Z | success | deployed https://vibrant-wasp-poll-wave.cloud.nexlayer.ai |
+| 2026-07-02T16:21:34Z | analyzed | initial repo analysis |
+| 2026-07-02T16:22:50Z | success | deployed https://vibrant-wasp-poll-wave.cloud.nexlayer.ai |
 <!-- nexlayer:end -->
+
 
 
 
