@@ -75,32 +75,30 @@ application:
       path: /
       servicePorts:
         - 3000
-      env:
-        - POD_ROLE: frontend
+      vars:
+        POD_ROLE: frontend
     - name: backend
       image: "# filled by pipeline"
       path: /api
       servicePorts:
         - 4000
-      env:
-        - POD_ROLE: backend
-        - NODE_ENV: production
-        - PORT: "4000"
-        - DATABASE_URL: postgresql://pollwave:pollwave@postgres.pod:5432/pollwave?schema=public
-        - REDIS_URL: redis://redis.pod:6379
-        - CORS_ORIGIN: https://vibrant-wasp-poll-wave.cloud.nexlayer.ai
+      vars:
+        POD_ROLE: backend
+        NODE_ENV: production
+        PORT: "4000"
+        DATABASE_URL: postgresql://pollwave:pollwave@postgres.pod:5432/pollwave?schema=public
+        REDIS_URL: redis://redis.pod:6379
+        CORS_ORIGIN: https://vibrant-wasp-poll-wave.cloud.nexlayer.ai
     - name: postgres
       image: mirror.gcr.io/library/postgres:16-alpine
-      path: /postgres
       servicePorts:
         - 5432
-      env:
-        - POSTGRES_USER: pollwave
-        - POSTGRES_PASSWORD: pollwave
-        - POSTGRES_DB: pollwave
+      vars:
+        POSTGRES_USER: pollwave
+        POSTGRES_PASSWORD: pollwave
+        POSTGRES_DB: pollwave
     - name: redis
       image: mirror.gcr.io/library/redis:7-alpine
-      path: /redis
       servicePorts:
         - 6379
 
