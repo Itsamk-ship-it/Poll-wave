@@ -75,14 +75,14 @@ application:
     # names do NOT collide with other apps. Keeping them lets a redeploy update
     # the existing poll-wave-* pods in place instead of scheduling a new set.
     - name: frontend
-      image: "# filled by pipeline"
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f23884afb"
       path: /
       servicePorts:
         - 3000
       vars:
         POD_ROLE: frontend
     - name: backend
-      image: "# filled by pipeline"
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f23884afb"
       path: /api
       servicePorts:
         - 4000
@@ -93,13 +93,13 @@ application:
         DATABASE_URL: postgresql://pollwave:pollwave@postgres.pod:5432/pollwave?schema=public
         REDIS_URL: redis://redis.pod:6379
         CORS_ORIGIN: https://vibrant-wasp-poll-wave.cloud.nexlayer.ai
-        # Injected from the dashboard-stored secrets (same ${...} mechanism the
-        # pipeline uses for the DB password). Without these the app falls back
-        # to insecure hardcoded dev signing keys.
-        JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
-        JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
-        JWT_ACCESS_EXPIRES: "${JWT_ACCESS_EXPIRES}"
-        JWT_REFRESH_EXPIRES: "${JWT_REFRESH_EXPIRES}"
+        # Concrete signing keys so auth never falls back to the insecure
+        # hardcoded dev defaults. Rotate these (or move to dashboard secrets)
+        # for a production app.
+        JWT_ACCESS_SECRET: "a9003340cac834bf4e6394dfbad4f787364a282583f94f5f849d3831df41dd0fe5ed337bcf3baf1cbea70bb38d3b13b6"
+        JWT_REFRESH_SECRET: "732dccc7a6e0b5513c3f9155662224e275bdeaf6597e0de1a926c022c31e4d15d9d69e3f9bdfbad5426b7994982ba6ec"
+        JWT_ACCESS_EXPIRES: "15m"
+        JWT_REFRESH_EXPIRES: "7d"
     - name: postgres
       image: mirror.gcr.io/library/postgres:16-alpine
       servicePorts:

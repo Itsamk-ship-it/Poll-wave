@@ -15,26 +15,26 @@
 
 ## Project Summary
 <!-- nexlayer:section agent-managed=project_summary -->
-PollWave is a real-time poll and voting platform featuring live results via WebSockets, diverse poll types, and a comprehensive user dashboard for analytics.
+PollWave is a real-time polling and voting platform featuring live results via WebSockets, comprehensive poll customization, and a full authentication system for both anonymous and registered users.
 <!-- nexlayer:end -->
 
 ## Technology Stack
 <!-- nexlayer:section agent-managed=tech_stack -->
 | Name | Kind | Version | Detected From |
 |------|------|---------|---------------|
-| Next.js | framework | Latest | Dockerfile, README.md |
+| Next.js | framework | 14/15 | Dockerfile |
 | Node.js | language | 20 | Dockerfile |
 | PostgreSQL | database | 16 | docker-compose.yml |
-| Redis | database | 7 | docker-compose.yml |
-| Prisma | tool | Latest | Dockerfile |
-| Socket.IO | framework | Latest | README.md |
+| Redis | cache | 7 | docker-compose.yml |
+| Prisma | tool | latest | Dockerfile |
+| Socket.IO | framework | latest | README.md |
 <!-- nexlayer:end -->
 
 ## Repository Structure
 <!-- nexlayer:section agent-managed=structure_map -->
-- frontend/ — Next.js application source and build config
-- backend/ — Express/Node.js API, Prisma schema, and business logic
-- docs/ — API documentation
+- backend/ — Express/Node.js API server and Prisma schema
+- frontend/ — Next.js standalone frontend application
+- docs/ — API documentation and guides
 <!-- nexlayer:end -->
 
 ## External Services Required
@@ -98,14 +98,14 @@ application:
     # frontend/backend/postgres collide with other apps' pods and stall the
     # deploy, so every pod is prefixed with the app name.
     - name: pollwave-frontend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f236eecc4"
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f23884afb"
       path: /
       servicePorts:
         - 3000
       vars:
         POD_ROLE: frontend
     - name: pollwave-backend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f236eecc4"
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f23884afb"
       path: /api
       servicePorts:
         - 4000
@@ -157,7 +157,7 @@ application:
 
 ## Nexlayer Configuration
 <!-- nexlayer:section agent-managed=nexlayer_config -->
-**Last deployed:** 2026-07-02T15:27:02Z  
+**Last deployed:** 2026-07-02T15:54:28Z  
 **Live URL:** https://vibrant-wasp-poll-wave.cloud.nexlayer.ai  
 **Runtime:**  · **Port:** auto-detected  
 **Deploy branch:** nexlayer  
@@ -171,14 +171,14 @@ application:
     # frontend/backend/postgres collide with other apps' pods and stall the
     # deploy, so every pod is prefixed with the app name.
     - name: pollwave-frontend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f236eecc4"
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f23884afb"
       path: /
       servicePorts:
         - 3000
       vars:
         POD_ROLE: frontend
     - name: pollwave-backend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f236eecc4"
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f23884afb"
       path: /api
       servicePorts:
         - 4000
@@ -208,9 +208,11 @@ application:
 <!-- nexlayer:section agent-managed=build_history -->
 | Date | Status | Notes |
 |------|--------|-------|
-| 2026-07-02T15:25:32Z | analyzed | initial repo analysis |
-| 2026-07-02T15:27:02Z | success | deployed https://vibrant-wasp-poll-wave.cloud.nexlayer.ai |
+| 2026-07-02T15:53:14Z | analyzed | initial repo analysis |
+| 2026-07-02T15:54:28Z | success | deployed https://vibrant-wasp-poll-wave.cloud.nexlayer.ai |
 <!-- nexlayer:end -->
+
+
 
 
 
