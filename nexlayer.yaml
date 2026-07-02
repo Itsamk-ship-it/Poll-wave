@@ -6,14 +6,14 @@ application:
     # frontend/backend/postgres collide with other apps' pods and stall the
     # deploy, so every pod is prefixed with the app name.
     - name: pollwave-frontend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f23581e58"
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f236eecc4"
       path: /
       servicePorts:
         - 3000
       vars:
         POD_ROLE: frontend
     - name: pollwave-backend
-      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f23581e58"
+      image: "registry.nexlayer.io/user_01kdnss9re3ack631zmxgpra36/poll-wave:19f236eecc4"
       path: /api
       servicePorts:
         - 4000
