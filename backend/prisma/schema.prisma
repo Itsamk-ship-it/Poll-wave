@@ -1,0 +1,274 @@
+// PollWave — Prisma schema
+// Normalized relational model for the Poll & Voting Platform.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PollType {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  YES_NO
+  RATING
+  EMOJI
+  IMAGE_CHOICE
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
+enum NotificationType {
+  VOTE
+  COMMENT
+  EXPIRED
+  MILESTONE
+  FOLLOW
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  username      String   @unique
+  passwordHash  String
+  name          String?
+  bio           String?
+  avatarUrl     String?
+  role          Role     @default(USER)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  polls         Poll[]
+  votes         Vote[]
+  comments      Comment[]
+  commentLikes  CommentLike[]
+  favorites     Favorite[]
+  notifications Notification[]
+  pollViews     PollView[]
+
+  following     Follow[] @relation("Following")
+  followers     Follow[] @relation("Followers")
+
+  @@index([email])
+  @@index([username])
+  @@map("users")
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower    User     @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  icon      String?
+  color     String?
+  createdAt DateTime @default(now())
+
+  polls     Poll[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id     String    @id @default(uuid())
+  name   String    @unique
+  slug   String    @unique
+  polls  PollTag[]
+
+  @@map("tags")
+}
+
+model Poll {
+  id          String     @id @default(uuid())
+  slug        String     @unique
+  title       String
+  description String?
+  coverImage  String?
+  type        PollType   @default(SINGLE_CHOICE)
+  visibility  Visibility @default(PUBLIC)
+
+  allowMultiple    Boolean @default(false)
+  oneVotePerIp     Boolean @default(false)
+  requireLogin     Boolean @default(false)
+  commentsDisabled Boolean @default(false)
+
+  isArchived  Boolean   @default(false)
+  isPinned    Boolean   @default(false)
+  closedAt    DateTime?
+  expiresAt   DateTime?
+
+  viewCount   Int       @default(0)
+  voteCount   Int       @default(0)
+
+  authorId    String
+  categoryId  String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category    Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  options     PollOption[]
+  votes       Vote[]
+  comments    Comment[]
+  favorites   Favorite[]
+  tags        PollTag[]
+  views       PollView[]
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([visibility])
+  @@index([createdAt])
+  @@index([voteCount])
+  @@map("polls")
+}
+
+model PollTag {
+  pollId String
+  tagId  String
+
+  poll   Poll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([pollId, tagId])
+  @@index([tagId])
+  @@map("poll_tags")
+}
+
+model PollOption {
+  id        String   @id @default(uuid())
+  pollId    String
+  text      String
+  imageUrl  String?
+  order     Int      @default(0)
+  voteCount Int      @default(0)
+
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes     Vote[]
+
+  @@index([pollId])
+  @@map("poll_options")
+}
+
+model Vote {
+  id         String   @id @default(uuid())
+  pollId     String
+  optionId   String
+  userId     String?
+  ipHash     String?
+  rating     Int?     // for RATING poll type (1-5)
+  userAgent  String?
+  device     String?  // desktop | mobile | tablet
+  browser    String?
+  createdAt  DateTime @default(now())
+
+  poll       Poll        @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option     PollOption  @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([pollId])
+  @@index([optionId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("votes")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  pollId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  poll      Poll          @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes     CommentLike[]
+
+  @@index([pollId])
+  @@index([userId])
+  @@map("comments")
+}
+
+model CommentLike {
+  id        String   @id @default(uuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@map("comment_likes")
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  pollId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, userId])
+  @@index([userId])
+  @@map("favorites")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  message   String
+  pollId    String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+model PollView {
+  id        String   @id @default(uuid())
+  pollId    String
+  userId    String?
+  ipHash    String?
+  device    String?
+  createdAt DateTime @default(now())
+
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([pollId])
+  @@index([createdAt])
+  @@map("poll_views")
+}

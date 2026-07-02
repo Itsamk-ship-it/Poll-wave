@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.next/
+out/
+build/
+coverage/
+*.log
+# The root .env is the single committed source of truth for this project.
+# Ignore only machine-local overrides.
+.env.local
+.env.*.local
+.DS_Store
+prisma/*.db
