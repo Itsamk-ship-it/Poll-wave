@@ -7,6 +7,10 @@ let io: IOServer | null = null;
 /** Initialise Socket.IO on the given HTTP server. */
 export function initSocket(server: HttpServer): IOServer {
   io = new IOServer(server, {
+    // Served under `/api/socket.io` so the handshake rides the `/api` route
+    // to this backend pod on Nexlayer (all pods share one hostname; path
+    // routing decides which pod handles a request). Must match the client.
+    path: '/api/socket.io',
     cors: { origin: env.corsOrigin, credentials: true },
   });
 
