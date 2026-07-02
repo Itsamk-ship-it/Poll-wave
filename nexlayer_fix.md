@@ -7,11 +7,10 @@ This file is the authoritative, pinned build solution for this repo. Nexlayer us
 ```dockerfile
 FROM mirror.gcr.io/library/node:20-alpine AS builder
 
-WORKDIR /app
+# Install build dependencies for native modules (needed for Prisma/bcrypt etc)
+RUN apk add --no-cache libc6-compat openssl
 
-# The previous Dockerfile tried to COPY package*.json ./ from root, 
-# but the root of this repo does not have a package.json (it is a monorepo with separate dirs).
-# We must install dependencies inside the specific directories.
+WORKDIR /app
 
 # Build Backend
 COPY backend/package*.json ./backend/
@@ -27,14 +26,16 @@ COPY frontend/ ./frontend/
 # Fix for Next.js standalone output
 RUN sed -i 's/output.*export/output: "standalone"/' frontend/next.config.* 2>/dev/null || true
 
-# Inject build-time env vars to satisfy T3-env/Zod validation during SSG
-# Based on the docker-compose and common Next.js patterns
+# Inject build-time env vars to satisfy validation during build/SSG
 ENV NEXT_PUBLIC_API_URL=https://api.placeholder.nexlayer.ai
 ENV NEXT_PUBLIC_WS_URL=wss://api.placeholder.nexlayer.ai
 
 RUN cd frontend && NODE_OPTIONS="--max-old-space-size=8192" npm run build
 
 FROM mirror.gcr.io/library/node:20-alpine AS runner
+
+# Install openssl for Prisma runtime
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
@@ -51,6 +52,41 @@ RUN cd backend && npm install --omit=dev
 
 EXPOSE 3000 4000
 
-# Default entrypoint for the frontend pod
+# The app consists of two parts. Since Nexlayer typically expects one entrypoint per pod,
+# and the provided Dockerfile was attempting to run the frontend server.js,
+# we stick to that but ensure we have the backend files available.
+# Note: In a real multi-pod setup, these would be separate images/pods.
 CMD ["node", "frontend/server.js"]
+
+```
+
+## Fixed nexlayer.yaml
+
+```yaml
+application:
+  name: poll-wave
+  pods:
+    - name: frontend
+      image: "# filled by pipeline"
+      port: 3000
+      env:
+        - NEXT_PUBLIC_API_URL: <% URL %>
+        - NEXT_PUBLIC_WS_URL: wss://<% URL %>
+    - name: backend
+      image: "# filled by pipeline"
+      port: 4000
+      env:
+        - DATABASE_URL: postgresql://pollwave:pollwave@postgres:5432/pollwave?schema=public
+        - REDIS_URL: redis://redis:6379
+    - name: postgres
+      image: mirror.gcr.io/library/postgres:16-alpine
+      port: 5432
+      env:
+        - POSTGRES_USER: pollwave
+        - POSTGRES_PASSWORD: pollwave
+        - POSTGRES_DB: pollwave
+    - name: redis
+      image: mirror.gcr.io/library/redis:7-alpine
+      port: 6379
+
 ```
