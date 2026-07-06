@@ -15,26 +15,26 @@
 
 ## Project Summary
 <!-- nexlayer:section agent-managed=project_summary -->
-PollWave is a real-time poll and voting platform featuring JWT authentication, live result updates via Socket.IO, and a comprehensive dashboard for analytics and poll management.
+PollWave is a real-time polling and voting platform featuring live results via WebSockets, multiple poll types, and a comprehensive dashboard for analytics and user management.
 <!-- nexlayer:end -->
 
 ## Technology Stack
 <!-- nexlayer:section agent-managed=tech_stack -->
 | Name | Kind | Version | Detected From |
 |------|------|---------|---------------|
-| Next.js | framework | latest | frontend/package.json |
+| Next.js | framework | 15.1 | Dockerfile, docker-compose.yml |
 | Node.js | language | 20 | Dockerfile |
 | PostgreSQL | database | 16 | docker-compose.yml |
-| Redis | database | 7 | docker-compose.yml |
+| Redis | cache | 7 | docker-compose.yml |
 | Prisma | tool | latest | Dockerfile |
 | Socket.IO | infra | latest | README.md |
 <!-- nexlayer:end -->
 
 ## Repository Structure
 <!-- nexlayer:section agent-managed=structure_map -->
-- backend/ — Node.js API with Prisma ORM and Socket.IO
-- frontend/ — Next.js application for user interface
-- Dockerfile — Multi-stage build for both frontend and backend
+- backend/ — Express/Node.js API, Prisma schema, and business logic
+- frontend/ — Next.js application with App Router and UI components
+- docs/ — Project documentation
 <!-- nexlayer:end -->
 
 ## External Services Required
@@ -90,6 +90,13 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 | `postgres` | `POSTGRES_USER` | `pollwave` | plain |
 | `postgres` | `POSTGRES_PASSWORD` | `"${POSTGRES_PASSWORD}"` | inter-pod |
 | `postgres` | `POSTGRES_DB` | `pollwave` | plain |
+| `postgres` | `POSTGRES_HOST_AUTH_METHOD` | _(set via Nexlayer dashboard)_ | secret |
+
+### Secrets Required
+
+Set these in the Nexlayer dashboard before deploying:
+
+- `POSTGRES_HOST_AUTH_METHOD` (`postgres` pod)
 
 ### nexlayer.yaml
 
@@ -135,6 +142,11 @@ application:
         POSTGRES_USER: pollwave
         POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
         POSTGRES_DB: pollwave
+        # Nexlayer's managed-credential substitution was leaving POSTGRES_PASSWORD
+        # empty in this pod, so Postgres refused to initialize. `trust` lets it
+        # init and accept in-cluster connections regardless of the resolved
+        # password (Postgres has no public path, so this is internal-only).
+        POSTGRES_HOST_AUTH_METHOD: trust
     - name: redis
       image: mirror.gcr.io/library/redis:7-alpine
       servicePorts:
@@ -168,7 +180,7 @@ application:
 
 ## Nexlayer Configuration
 <!-- nexlayer:section agent-managed=nexlayer_config -->
-**Last deployed:** 2026-07-02T16:22:50Z  
+**Last deployed:** 2026-07-06T13:33:59Z  
 **Live URL:** https://vibrant-wasp-poll-wave.cloud.nexlayer.ai  
 **Runtime:**  · **Port:** auto-detected  
 **Deploy branch:** nexlayer  
@@ -215,6 +227,11 @@ application:
         POSTGRES_USER: pollwave
         POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
         POSTGRES_DB: pollwave
+        # Nexlayer's managed-credential substitution was leaving POSTGRES_PASSWORD
+        # empty in this pod, so Postgres refused to initialize. `trust` lets it
+        # init and accept in-cluster connections regardless of the resolved
+        # password (Postgres has no public path, so this is internal-only).
+        POSTGRES_HOST_AUTH_METHOD: trust
     - name: redis
       image: mirror.gcr.io/library/redis:7-alpine
       servicePorts:
@@ -226,9 +243,10 @@ application:
 <!-- nexlayer:section agent-managed=build_history -->
 | Date | Status | Notes |
 |------|--------|-------|
-| 2026-07-02T16:21:34Z | analyzed | initial repo analysis |
-| 2026-07-02T16:22:50Z | success | deployed https://vibrant-wasp-poll-wave.cloud.nexlayer.ai |
+| 2026-07-06T13:32:05Z | analyzed | initial repo analysis |
+| 2026-07-06T13:33:59Z | success | deployed https://vibrant-wasp-poll-wave.cloud.nexlayer.ai |
 <!-- nexlayer:end -->
+
 
 
 
